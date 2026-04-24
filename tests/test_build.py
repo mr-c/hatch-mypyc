@@ -5,10 +5,13 @@ import os
 import zipfile
 
 from packaging.tags import sys_tags
+from packaging.version import Version
+from mypy.version import __version__ as mypy_version
 
 from .utils import build_project
 
 best_matching_tag = next(iter(t for t in sys_tags() if 'manylinux' not in t.platform and 'musllinux' not in t.platform))
+mypy_v1_20_2_plus = Version(mypy_version) >= Version("1.20.2")
 
 
 def test_target_not_wheel(new_project):
@@ -177,18 +180,18 @@ def test_separation(new_project):
     assert extracted_package_dir.is_dir()
 
     distributed_files = list(extracted_package_dir.iterdir())
-    assert len(distributed_files) == 5
+    assert len(distributed_files) == (6 if mypy_v1_20_2_plus else 5), distributed_files
 
-    root_files = 0
-    fibonacci_files = 0
+    root_files = []
+    fibonacci_files = []
     for distributed_file in distributed_files:
         if distributed_file.name.startswith('__init__'):
-            root_files += 1
+            root_files.append(distributed_file)
         elif distributed_file.name.startswith('fib'):
-            fibonacci_files += 1
+            fibonacci_files.append(distributed_file)
 
-    assert root_files == 1
-    assert fibonacci_files == 3
+    assert len(root_files) == (2 if mypy_v1_20_2_plus else 1), root_files
+    assert len(fibonacci_files) == 3, fibonacci_files
 
 
 def test_src_layout(new_project, compiled_extension):
